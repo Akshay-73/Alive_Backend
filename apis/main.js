@@ -13,6 +13,7 @@ const path = require('path');
 //----Api exports------------------------------------------------
 exports.upload = upload;
 exports.getAllNotifications = getAllNotifications;
+exports.getRandomQuotes = getRandomQuotes;
 
 //---Api codes here----------------------------------------------
 //--upload-------------------------------------------------------
@@ -82,6 +83,36 @@ function getAllNotifications(req, res) {
     .then((data) => {
       response.status = 200;
       response.data = data;
+      response.message = "Success.";
+      res.json(response);
+    })
+    .catch((err) => {
+      console.log(err);
+      response.status = 400;
+      response.message = "Error";
+      res.json(response);
+    });
+}
+
+//-------get random quotes-------------------------------
+
+function getRandomQuotes(req, res) {
+  let response = {
+    status: 0,
+    data: {},
+    message: ""
+  };
+
+  new Promise((resolve, reject) => {
+    conn.query(`SELECT * FROM quotes ORDER BY RAND() LIMIT 1`,
+      (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+  })
+    .then((data) => {
+      response.status = 200;
+      response.data = data[0];
       response.message = "Success.";
       res.json(response);
     })

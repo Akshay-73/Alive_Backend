@@ -45,7 +45,7 @@ function transferEventToTribeMember(req, res) {
                       if (err) reject(err);
                       else {
                         var fcm = new FCM(serverKey);
-                        let notificationText = `Important !!. ${fcmOfUsers[0].userName} transfered all the rights of their event to you.`
+                        let notificationText = `Important !!. "${fcmOfUsers[0].userName}" transfered all the rights of their event to you.`
                         var message = {
                           to: fcmOfUsers[0].userFcmToken,
                           priority: 'normal',
@@ -140,16 +140,19 @@ function requestJoinTribe(req, res) {
               (err, result) => {
                 if (err) reject(err);
                 else {
-                  conn.query(`SELECT userId FROM events WHERE eventId = ?`, [eventId],
+                  conn.query(`SELECT userId, eventTitle FROM events WHERE eventId = ?`, [eventId],
                     (err, userIds) => {
                       if (err) reject(err);
                       else {
-                        conn.query(`SELECT userFcmToken FROM users WHERE userId = ?`, [userIds[0].userId],
+                        conn.query(`SELECT userFcmToken,
+                        (SELECT userImage FROM users WHERE userId = ?) AS userImage,
+                        (SELECT userName FROM users WHERE userId = ?) AS userName
+                        FROM users WHERE userId = ?`, [token.userId, token.userId, userIds[0].userId],
                           (err, fcmOfUsers) => {
                             if (err) reject(err);
                             else {
                               var fcm = new FCM(serverKey);
-                              let notificationText = `You have a new tribe join request.`
+                              let notificationText = `"${fcmOfUsers[0].userName}" has requested to join the tribe of your Event: "${userIds[0].eventTitle}".`
                               var message = {
                                 to: fcmOfUsers[0].userFcmToken,
                                 priority: 'normal',
@@ -172,7 +175,8 @@ function requestJoinTribe(req, res) {
                                   console.log("Successfully sent with response: ", response);
                                 }
                               });
-                              conn.query(`INSERT INTO notifications (userId, notification) VALUES (?,?)`, [userIds[0].userId, notificationText],
+                              conn.query(`INSERT INTO notifications (userId, notification, notificationImage) VALUES (?,?,?)`,
+                              [userIds[0].userId, notificationText, fcmOfUsers[0].userImage],
                                 (err, result) => {
                                   if (err) reject(err);
                                   else resolve(result);
@@ -237,13 +241,14 @@ function tribeRequestAction(req, res) {
                         if (err) reject(err);
                         else {
                           conn.query(`SELECT userFcmToken,
-                          (SELECT eventTitle FROM events WHERE eventId = ?) AS eventTitle
-                          FROM users WHERE userId = ?`, [eventId, userId],
+                          (SELECT eventTitle FROM events WHERE eventId = ?) AS eventTitle,
+                          (SELECT eventImages FROM events WHERE eventId = ?) AS eventImages
+                          FROM users WHERE userId = ?`, [eventId, eventId, userId],
                             (err, fcmOfUsers) => {
                               if (err) reject(err);
                               else {
                                 var fcm = new FCM(serverKey);
-                                let notificationText = `Yupee! You are now a tribe member of Event: ${fcmOfUsers[0].eventTitle}.`
+                                let notificationText = `Yupee! You are now a tribe member of Event: "${fcmOfUsers[0].eventTitle}".`
                                 var message = {
                                   to: fcmOfUsers[0].userFcmToken,
                                   priority: 'normal',
@@ -265,7 +270,8 @@ function tribeRequestAction(req, res) {
                                     console.log("Successfully sent with response: ", response);
                                   }
                                 });
-                                conn.query(`INSERT INTO notifications (userId, notification) VALUES (?,?)`, [userId, notificationText],
+                                conn.query(`INSERT INTO notifications (userId, notification, notificationImage) VALUES (?,?,?)`,
+                                [userId, notificationText, JSON.parse(fcmOfUsers[0].eventImages)[0]],
                                 (err, result) => {
                                   if (err) reject(err);
                                   else resolve(result);
@@ -283,13 +289,14 @@ function tribeRequestAction(req, res) {
                   if (err) reject(err);
                   else {
                     conn.query(`SELECT userFcmToken,
-                    (SELECT eventTitle FROM events WHERE eventId = ?) AS eventTitle
-                    FROM users WHERE userId = ?`, [eventId, userId],
+                    (SELECT eventTitle FROM events WHERE eventId = ?) AS eventTitle,
+                    (SELECT eventImages FROM events WHERE eventId = ?) AS eventImages
+                    FROM users WHERE userId = ?`, [eventId, eventId, userId],
                       (err, fcmOfUsers) => {
                         if (err) reject(err);
                         else {
                           var fcm = new FCM(serverKey);
-                          let notificationText = `Oops!! Your request to join Event: ${fcmOfUsers[0].eventTitle} has been rejected.`
+                          let notificationText = `Oops!! Your request to join Event: "${fcmOfUsers[0].eventTitle}" has been rejected.`
                           var message = {
                             to: fcmOfUsers[0].userFcmToken,
                             priority: 'normal',
@@ -310,7 +317,8 @@ function tribeRequestAction(req, res) {
                               console.log("Successfully sent with response: ", response);
                             }
                           });
-                          conn.query(`INSERT INTO notifications (userId, notification) VALUES (?,?)`, [userId, notificationText],
+                          conn.query(`INSERT INTO notifications (userId, notification, notificationImage) VALUES (?,?,?)`,
+                          [userId, notificationText, JSON.parse(fcmOfUsers[0].eventImages)[0]],
                           (err, result) => {
                             if (err) reject(err);
                             else resolve(result);

@@ -15,6 +15,7 @@ exports.resendOTP = resendOTP;
 exports.logout = logout;
 
 //---Api codes here----------------------------------------------
+const userImageDefault = 'https://alive-bucket.s3.amazonaws.com/file-4510239702021696.png';
 //-----signup------------------------------------------------------------
 
 function signup(req, res, cb) {
@@ -33,8 +34,8 @@ function signup(req, res, cb) {
           if (err) reject(err);
           else
             if (result[0].countt === 0) {
-              conn.query(`INSERT INTO users (signupType, socialKey, userEmail) VALUES (?,?,?)`,
-              [signupType, socialKey, userEmail],
+              conn.query(`INSERT INTO users (signupType, socialKey, userEmail, userImage) VALUES (?,?,?,?)`,
+              [signupType, socialKey, userEmail, userImageDefault],
                 (err, result1) => {
                   if (err) reject(err);
                   else {
@@ -63,8 +64,8 @@ function signup(req, res, cb) {
           if (err) reject(err);
           else
             if (result[0].countt === 0) {
-              conn.query(`INSERT INTO users (signupType, otp, userPhone) VALUES (?,?,?)`,
-                [signupType, otp, userPhone],
+              conn.query(`INSERT INTO users (signupType, otp, userPhone, userImage) VALUES (?,?,?,?)`,
+                [signupType, otp, userPhone, userImageDefault],
                 (err, result1) => {
                   if (err) reject(err);
                   else {
@@ -215,7 +216,7 @@ function signup(req, res, cb) {
         response.status = 200;
         response.data = {};
         response.message = "success.";
-        res.json(response);
+        // res.json(response);
       })
       .catch((err) => {
         console.log(err);

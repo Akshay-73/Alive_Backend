@@ -216,10 +216,10 @@ function editEvent(req, res, cb) {
 
     conn.query(`UPDATE events SET eventTitle = ?, eventDescription = ?, eventCategoryId = ?, eventTags = ?,
       eventImages = ?, eventLocation = ?, eventDateType = ?, eventDate = ?, selectedWeekDay = ?, eventOthers = ?,
-      eventWhatsStoping = ?, WHERE eventId = ?`,
+      eventWhatsStoping = ? WHERE eventId = ?`,
       [eventTitle, eventDescription, eventCategoryId, eventTags, eventImages, eventLocation, eventDateType,
         eventDate, selectedWeekDay, eventOthers, eventWhatsStoping, eventId], (error, result) => {
-          if (error) reject(error)
+          if (error) console.log(error);
           else {
             response.status = 200;
             response.data = {}
@@ -365,14 +365,15 @@ function liveEvent(req, res) {
             arrayOfUserId.push(value.userId);
           });
           conn.query(`SELECT userFcmToken, userId,
-          (SELECT eventTitle FROM events WHERE eventId = ?) AS eventTitle
-          FROM users WHERE userId IN (?)`, [eventId, arrayOfUserId],
+          (SELECT eventTitle FROM events WHERE eventId = ?) AS eventTitle,
+          (SELECT eventImages FROM events WHERE eventId = ?) AS eventImages
+          FROM users WHERE userId IN (?)`, [eventId, eventId, arrayOfUserId],
             (err, fcmOfUsers) => {
               if (err) reject(err);
               else {
                 _.forEach(fcmOfUsers, (value, key) => {
                   var fcm = new FCM(serverKey);
-                  let notificationText = `Congratulations. Event: ${value.eventTitle} has been lived. Please add your experience.`
+                  let notificationText = `Congratulations. Event: "${value.eventTitle}" has been lived. Please add your experience.`
                   var message = {
                     to: value.userFcmToken,
                     priority: 'normal',
@@ -395,7 +396,8 @@ function liveEvent(req, res) {
                       console.log("Successfully sent with response: ", response);
                     }
                   });
-                  conn.query(`INSERT INTO notifications (userId, notification) VALUES (?,?)`, [value.userId, notificationText],
+                  conn.query(`INSERT INTO notifications (userId, notification, notificationImage) VALUES (?,?,?)`,
+                  [value.userId, notificationText, JSON.parse(value.eventImages)[0]],
                     (err, result) => {
                       if (err) reject(err);
                       else resolve(result);
@@ -687,6 +689,7 @@ function getEventById(req, res, cb) {
   let isMeCreator;
   let ifExperience;
   let experienceImages;
+  let experienceDescription;
   let finalImages;
   function geteventChecks(cb) {
     conn.query(`SELECT * FROM experience WHERE eventId = ?`, [eventId],
@@ -696,6 +699,8 @@ function getEventById(req, res, cb) {
           if (result.length > 0 && JSON.parse(result[0].experienceImages).length > 0) {
             ifExperience = true;
             experienceImages = JSON.parse(result[0].experienceImages);
+          } if(result.length > 0 && result[0].experience){
+            experienceDescription = result[0].experience;
           } else {
             ifExperience = false;
           }
@@ -708,9 +713,10 @@ function getEventById(req, res, cb) {
 
     conn.query(`SELECT e.*, c.*,
       (SELECT userName FROM users WHERE userId = e.userId) userName,
-      (SELECT count(experienceId) FROM experience WHERE eventId = ?) AS ifExperienceExists
+      (SELECT count(experienceId) FROM experience WHERE eventId = ?) AS ifExperienceExists,
+      (SELECT count(requestId) FROM tribe_requests WHERE eventId = ?) AS pendingRequestCount
       FROM events e JOIN categories c ON e.eventCategoryId = c.categoryId WHERE e.eventId = ?`,
-      [eventId, eventId], (err, result) => {
+      [eventId, eventId, eventId], (err, result) => {
         if (err) cb(err)
         else {
           if (result.length > 0) {
@@ -733,11 +739,12 @@ function getEventById(req, res, cb) {
               "isMeCreator": isMeCreator,
               "CreatedBy": userName,
               "eventTitle": result[0].eventTitle,
-              "eventDescription": result[0].eventDescription,
+              "eventDescription": experienceDescription || result[0].eventDescription,
               "eventCategoryId": result[0].eventCategoryId,
               "categoryName": result[0].categoryName,
               "categoryImage": result[0].categoryImage,
               "categoryColor": result[0].categoryColor,
+              "categoryNameColor": result[0].categoryNameColor,
               "eventTags": JSON.parse(result[0].eventTags),
               "eventImages": finalImages,
               "eventLocation": result[0].eventLocation,
@@ -748,7 +755,8 @@ function getEventById(req, res, cb) {
               "eventWhatsStoping": result[0].eventWhatsStoping,
               "eventStatus": result[0].eventStatus,
               "eventLivedOn": result[0].eventLivedOn,
-              "ifExperienceExists": result[0].ifExperienceExists
+              "ifExperienceExists": result[0].ifExperienceExists,
+              "pendingRequestCount": result[0].pendingRequestCount
             };
             cb(null, eventData);
           }
@@ -974,12 +982,13 @@ function getEventByIdForWeb(req, res, cb) {
               "eventImages": JSON.parse(result[0].eventImages),
               "eventLocation": result[0].eventLocation,
               "eventDate": result[0].eventDate,
-              "eventWhatsStoping": result[0].eventWhatsStoping
+              "eventWhatsStoping": result[0].eventWhatsStoping,
+              "eventStatus": result[0].eventStatus,
             };
             cb(null, eventData);
           }
           else {
-            response.status = 200;
+            response.status = 400;
             response.data = {}
             response.message = "Event not found.";
             res.json(response)
@@ -1029,7 +1038,7 @@ function getEventByIdForWeb(req, res, cb) {
               if (err) reject(err);
               else {
                 var fcm = new FCM(serverKey);
-                let notificationText = `Someone viewed the invitation you sent to join your Event: ${fcmOfUsers[0].eventTitle}.`
+                let notificationText = `Someone viewed the invitation you sent to join your Event: "${fcmOfUsers[0].eventTitle}".`
                 var message = {
                   to: fcmOfUsers[0].userFcmToken,
                   priority: 'normal',

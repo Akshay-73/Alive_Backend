@@ -32,10 +32,12 @@ router.get("/getEventByIdForWeb", events.getEventByIdForWeb);
 
 //---main----------------------------------------------------
 router.get("/getAllNotifications", utils.verifyToken, main.getAllNotifications);
+router.get("/getRandomQuotes", main.getRandomQuotes);
 
 //---chats---------------------------------------------------
 router.get("/getChatRooms", utils.verifyToken, chats.getChatRooms);
 router.get("/getAllChats", utils.verifyToken, chats.getAllChats);
+router.post("/deleteMyMessage", utils.verifyToken, chats.deleteMyMessage);
 
 //---tags----------------------------------------------------
 router.get("/getAllTags", utils.verifyToken, tags.getAllTags);

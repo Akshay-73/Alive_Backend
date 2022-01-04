@@ -1,0 +1,8 @@
+2, When the transfer rights module is implemented, need to check for the completed events as well. User must not delete
+the completed event. As how will we handle the experience of the person if event is lived and then he needs to transfer it.
+
+3, When event is deleted, handle the room delete as well for chats. Handle delete experience as well.
+
+4, Is tribe member allowed to edit the event ?
+
+getAllNotifications. make it user specific.
